@@ -1,19 +1,85 @@
 # macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotify
+.Hiddens*
+.AppleDouble
+.LSOverride
+Icon?
+Thumbs.db
 
-# PHP deps
+# IDE / Editor (VS Code)
+.vscode/
+*.vscode-insiders.*
+*.code-workspace
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# IDE / Editor (PHPStorm / PhpStorm)
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+.env.local
+.env.*.local
+.php-version
+.env.*.bak
+
+# PHP / Composer
 /vendor/
 backend/vendor/
+composer.phar
+composer.lock.local
 
-# Backend environment/config
-backend/.env
-
-# Frontend dependencies and build output
+# Node / Frontend
 frontend/node_modules/
-frontend/.nuxt/
-frontend/.output/
-frontend/dist/
+.nuxt/
+.output/
+dist/
+.npm
+.yarn/
+.pnp.*
 
-# Frontend environment files
-frontend/.env
-frontend/.env.*
+# Nuxt / Vue specific
+.nuxt/
+.vite/
+.vite-deps/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log.gz
+
+# Runtime data
+pids/*.pid
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage / testing
+coverage/
+.nyc_output/
+.phpunit.result.cache
+.phpunit.cache
+
+# OS files
+Thumbs.db
+ehthumbs.db
+.DS_Store
+.WSCLocalLinks
+.Trashes
+fseventicsw
