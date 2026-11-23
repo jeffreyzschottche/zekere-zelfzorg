@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { roleNames, statusNames, type Entry, type Followup, type Profile, type Today } from '~/types/Care'
+import { roleNames, statusNames, type Entry, type Followup, type Inbox, type Profile, type Skill, type Today } from '~/types/Care'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -7,6 +7,8 @@ const api = useApi()
 const route = useRoute()
 const entries = ref<Entry[]>([])
 const checks = ref<Followup[]>([])
+const skills = ref<Skill[]>([])
+const inbox = ref<Inbox>()
 const profiles = ref<Profile[]>([])
 const profile = ref<Profile>()
 const today = ref<Today>()
@@ -25,12 +27,16 @@ async function select(next: Profile) {
   profile.value = next
   today.value = undefined
   try {
-    const [plan, log, followups] = await Promise.all([
+    const [plan, log, followups, assessments, reviews] = await Promise.all([
       api.get<Today>(`${base.value}/today`), api.get<Entry[]>(`${base.value}/log`), api.get<Followup[]>(`${base.value}/followups`),
+      api.get<Skill[]>(`${base.value}/skills`),
+      next.role === 'professional' ? api.get<Inbox>(`${base.value}/reviews`) : undefined,
     ])
     today.value = plan
     entries.value = log
     checks.value = followups
+    skills.value = assessments
+    inbox.value = reviews
     assignment.starts_on = today.value.day
     assignment.assignee_id = today.value.members.find(member => member.role !== 'professional')?.id ?? 0
   } catch {
@@ -71,6 +77,26 @@ async function refreshChecks() {
     if (profile.value?.id === selected) checks.value = fresh
   } catch {
     if (profile.value?.id === selected) error.value = 'De nazorgchecks konden niet worden vernieuwd.'
+  }
+}
+
+async function refreshReviews() {
+  const selected = profile.value?.id
+  try {
+    const fresh = await api.get<Inbox>(`${base.value}/reviews`)
+    if (profile.value?.id === selected) inbox.value = fresh
+  } catch {
+    if (profile.value?.id === selected) error.value = 'De beoordelingen konden niet worden vernieuwd.'
+  }
+}
+
+async function refreshSkills() {
+  const selected = profile.value?.id
+  try {
+    const fresh = await api.get<Skill[]>(`${base.value}/skills`)
+    if (profile.value?.id === selected) skills.value = fresh
+  } catch {
+    if (profile.value?.id === selected) error.value = 'De vaardigheidsstatus kon niet worden vernieuwd.'
   }
 }
 
@@ -133,6 +159,8 @@ async function plan() {
           </ul>
         </section>
       </div>
+      <CareReview v-if="inbox" :key="profile.id" :profile="profile.id" :entries="entries" :inbox="inbox" @refresh="refreshReviews" />
+      <CareSkills v-if="skills.length" :key="profile.id" :profile="profile.id" :skills="skills" :professional="profile.role === 'professional'" @refresh="refreshSkills" />
       <CareFollowups :key="profile.id" :profile="profile.id" :checks="checks" @refresh="refreshChecks" />
       <CareLog :entries="entries" :checks="checks" />
       <form v-if="profile.role === 'professional'" class="care-card care-stack" @submit.prevent="plan">

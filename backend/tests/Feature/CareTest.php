@@ -93,4 +93,32 @@ class CareTest extends TestCase
             ->assertJsonPath('0.deviation', true);
         $this->assertDatabaseCount('care_alerts', 1);
     }
+
+    public function test_reviews_and_individual_skill_assessments_require_a_professional(): void
+    {
+        $profile = DB::table('care_profiles')->value('id');
+        $assignment = DB::table('care_assignments')->value('id');
+        $base = "/api/v1/care/profiles/$profile";
+        $this->loginAs('sam');
+        $this->postJson("$base/assignments/$assignment/2026-11-23", [
+            'status' => 'performed', 'version' => 'demo-1', 'answers' => ['doubt' => 'yes'],
+        ])->assertCreated();
+        $entry = DB::table('care_executions')->value('id');
+        $skill = ['user_id' => User::whereEmail('sam@example.test')->value('id'),
+            'status' => 'demonstrated', 'method' => 'demo_observation', 'note' => 'Oefenscenario getoond.'];
+        $review = ['outcome' => 'followup', 'note' => 'In de demo opnieuw bespreken.'];
+        $this->getJson("$base/reviews")->assertForbidden();
+        $this->postJson("$base/reviews/$entry", $review)->assertForbidden();
+        $this->postJson("$base/skills", $skill)->assertForbidden();
+        $this->loginAs('robin');
+        $this->getJson("$base/reviews")->assertOk()->assertJsonPath('alerts.0.outcome', null);
+        $this->postJson("$base/reviews/$entry", $review)->assertCreated();
+        $this->postJson("$base/skills", $skill)->assertCreated();
+        $this->getJson("$base/reviews")->assertJsonPath('alerts.0.outcome', 'followup')
+            ->assertJsonPath('reviews.0.reviewer', 'Robin Visser');
+        $this->loginAs('noor');
+        $this->getJson("$base/skills")->assertJsonCount(1)->assertJsonPath('0.status', null);
+        $this->loginAs('sam');
+        $this->getJson("$base/skills")->assertJsonCount(1)->assertJsonPath('0.status', 'demonstrated');
+    }
 }

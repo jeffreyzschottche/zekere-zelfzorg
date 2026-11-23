@@ -38,3 +38,13 @@ export type Followup = {
   question: string; options: Record<string, string>; answer: string | null; observer: string | null
   deviation: boolean; can_answer: boolean
 }
+
+export type Skill = {
+  id: number; name: string; status: 'demonstrated' | 'practice' | 'reassess' | null
+  note: string | null; reviewer: string | null; reviewed_at: string | null; method: string | null; version: string | null
+}
+export type Review = {
+  execution_id: number; outcome: 'seen' | 'followup'; note: string; reviewer: string; reviewed_at: string
+}
+export type Alert = { id: number; source: 'checklist' | 'followup'; execution_id: number; outcome: Review['outcome'] | null }
+export type Inbox = { alerts: Alert[]; reviews: Review[] }

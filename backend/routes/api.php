@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CareController;
 use App\Http\Controllers\Api\V1\ExecutionController;
 use App\Http\Controllers\Api\V1\FollowupController;
+use App\Http\Controllers\Api\V1\ReviewController;
 
 Route::prefix('v1')->group(function () {
     // Public routes
@@ -28,6 +29,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/care/profiles/{profile}/assignments/{assignment}/{day}', [ExecutionController::class, 'store']);
         Route::get('/care/profiles/{profile}/followups', [FollowupController::class, 'index']);
         Route::post('/care/profiles/{profile}/followups/{check}', [FollowupController::class, 'answer']);
+        Route::get('/care/profiles/{profile}/reviews', [ReviewController::class, 'index']);
+        Route::post('/care/profiles/{profile}/reviews/{execution}', [ReviewController::class, 'review']);
+        Route::get('/care/profiles/{profile}/skills', [ReviewController::class, 'skills']);
+        Route::post('/care/profiles/{profile}/skills', [ReviewController::class, 'assess']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/email/resend', [AuthController::class, 'resendVerification']);
     });
