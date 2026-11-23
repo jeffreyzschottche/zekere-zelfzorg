@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CareController;
 
 Route::prefix('v1')->group(function () {
     // Public routes
@@ -17,6 +18,9 @@ Route::prefix('v1')->group(function () {
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/care/profiles', [CareController::class, 'profiles']);
+        Route::get('/care/profiles/{profile}/today', [CareController::class, 'today']);
+        Route::post('/care/profiles/{profile}/assignments', [CareController::class, 'assign']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/email/resend', [AuthController::class, 'resendVerification']);
     });
