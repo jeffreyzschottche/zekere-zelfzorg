@@ -10,7 +10,7 @@
 
 De app hergebruikt Laravel en Sanctum voor de API en Nuxt voor de schermen. Het demosjabloon staat in de back-end. Bij toekomstige sjabloonwijzigingen moet elke gebruikte versie beschikbaar blijven in een onveranderlijk versieregister. De demo gebruikt één versie.
 
-Het portaal ondersteunt een lokale demonstratie. Beeldmateriaal, uitnodigingsbeheer, push- en e-mailherinneringen, correcties op bestaande registraties, oefentoetsen en externe zorgkoppelingen zijn nog niet geïmplementeerd.
+Het portaal ondersteunt een lokale demonstratie. Beeldmateriaal, uitnodigingsbeheer, push- en e-mailherinneringen, correcties op bestaande registraties en externe zorgkoppelingen zijn nog niet geïmplementeerd. De oefentoets geeft lokale feedback over het gebruik van de app. Antwoorden en vertrouwenscheck verdwijnen wanneer je het scherm verlaat. Professionele vaardigheidsbeoordelingen blijven afzonderlijk in de database.
 
 Voor een zorgpilot moeten het betrokken zorgteam en de verantwoordelijke organisatie onder meer de protocolversie, materiaalrechten, bekwaamheidscriteria, tijdkritische contactroutes en verantwoordelijkheid voor opvolging vastleggen. Besluiten over privacy, toepasselijke regels, identiteitscontrole, bewaartermijnen, audit, beveiliging, incidentafhandeling en eventuele classificatie vereisen afzonderlijke beoordeling. De demoaccounts, lokale opslagkeuze en browsergebonden bearer-sessie zijn bedoeld voor de demonstratie. Beoordeel de sessiearchitectuur en de omgang met persoonsgegevens vóór een pilot.
 

@@ -38,13 +38,13 @@ Gebruik het wachtwoord `ZekereDemo2026!` voor alle vier fictieve accounts.
 | robin@example.test | Zorgprofessional | Plannen, demomeldingen en beoordelingen |
 | noor@example.test | Invallende mantelzorger | Eigen vaardigheidsstatus en eigen toewijzingen |
 
-1. Log in als Sam. Open de taak van vandaag, volg de voorbeeldstappen en sla de eindcheck op. In het logboek staan ook twee historische uitvoeringen, waarvan één achteraf ingevoerd.
+1. Log in als Sam. Open de taak van vandaag, volg de voorbeeldstappen en sla de eindcheck op. Via **Oefentoets** kun je het gebruik van de app oefenen. In het logboek staan ook twee historische uitvoeringen, waarvan één achteraf ingevoerd.
 2. Log in als Alex. Er staat al een historische nazorgcheck klaar. Antwoord op de demonstratievraag en kies **Ja** om de ingestelde afwijkingsregel te zien.
 3. Log in als Robin. Open de gesimuleerde melding en leg een beoordeling vast. Bekijk ook het verschil tussen de vaardigheidsstatus van Sam en Noor. Voor een nieuwe demonstratietaak kun je de nazorgtermijn op nul minuten zetten.
 4. Log in als Noor. Dit account ziet zijn eigen vaardigheidsstatus en kan alleen eigen toegewezen uitvoeringen registreren.
 
 ## Status en verificatie
 
-De planning, registraties, nazorgantwoorden en beoordelingen worden in de database opgeslagen. Openstaande nazorgchecks verschijnen in het portaal zodra ze ingevuld kunnen worden. Meldingen blijven binnen het portaal en zijn gesimuleerd. Medische instructies, echte verzending, uploads, uitnodigingen en uitgebreide toetsing vallen buiten deze versie.
+De planning, registraties, nazorgantwoorden en beoordelingen worden in de database opgeslagen. Openstaande nazorgchecks verschijnen in het portaal zodra ze ingevuld kunnen worden. Meldingen blijven binnen het portaal en zijn gesimuleerd. Medische instructies, echte verzending, uploads, uitnodigingen en klinische toetsing vallen buiten deze versie.
 
-`php artisan test` draait de backendtests. `npm run build` controleert de frontendbuild. Zie de [starterkitanalyse](docs/analysis.md), [roadmap](docs/roadmap.md) en [gegevens- en pilotnotities](docs/data-and-pilot.md).
+`php artisan test` draait de backendtests. `npm run build` controleert de frontendbuild. Vanuit `frontend` test `node --test tests/carePractice.test.mjs` de scoreberekening. Zie de [starterkitanalyse](docs/analysis.md), [roadmap](docs/roadmap.md) en [gegevens- en pilotnotities](docs/data-and-pilot.md).

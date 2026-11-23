@@ -13,7 +13,7 @@ async function handleLogin() {
   try {
     await auth.login(form.email, form.password)
     const target = route.query.redirect
-    const redirect = typeof target === 'string' && /^\/(dashboard|handeling)(\?|$)/.test(target)
+    const redirect = typeof target === 'string' && /^\/(dashboard|handeling|oefenen)(\?|$)/.test(target)
       ? target : '/dashboard'
     await navigateTo(redirect)
   } catch {

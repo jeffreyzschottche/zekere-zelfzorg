@@ -127,6 +127,7 @@ async function refreshSkills() {
         <a class="care-button care-secondary" href="#planning">Zorgplanning</a>
         <a class="care-button care-secondary" href="#followup-title">Nazorgchecks</a>
         <a class="care-button care-secondary" href="#log-title">Logboek</a>
+        <NuxtLink v-if="profile.role !== 'professional'" class="care-button care-secondary" to="/oefenen">Oefentoets</NuxtLink>
       </nav>
       <div role="status">
         <a v-if="dueCount" href="#followup-title" class="care-badge">{{ dueCount === 1 ? 'Er staat een nazorgcheck klaar' : dueCount + ' nazorgchecks staan klaar' }}</a>
