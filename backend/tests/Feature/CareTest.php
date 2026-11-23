@@ -114,8 +114,18 @@ class CareTest extends TestCase
         $this->getJson("$base/reviews")->assertOk()->assertJsonPath('alerts.0.outcome', null);
         $this->postJson("$base/reviews/$entry", $review)->assertCreated();
         $this->postJson("$base/skills", $skill)->assertCreated();
+        $this->postJson("$base/reviews/$entry", $review)->assertConflict();
         $this->getJson("$base/reviews")->assertJsonPath('alerts.0.outcome', 'followup')
             ->assertJsonPath('reviews.0.reviewer', 'Robin Visser');
+        $this->travel(15)->minutes();
+        $this->loginAs('alex');
+        $check = DB::table('care_followups')->value('id');
+        $this->postJson("$base/followups/$check", ['answer' => 'yes'])->assertOk();
+        $this->loginAs('robin');
+        $this->getJson("$base/reviews")->assertJsonPath('alerts.0.outcome', null)
+            ->assertJsonPath('alerts.1.outcome', 'followup');
+        $this->postJson("$base/reviews/$entry", $review)->assertCreated();
+        $this->getJson("$base/reviews")->assertJsonPath('alerts.0.outcome', 'followup');
         $this->loginAs('noor');
         $this->getJson("$base/skills")->assertJsonCount(1)->assertJsonPath('0.status', null);
         $this->loginAs('sam');

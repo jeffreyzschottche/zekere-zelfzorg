@@ -16,20 +16,27 @@ class ReviewController
     public function index(Request $request, int $profile): array
     {
         $this->access->requireProfessional($profile, $request->user()->id);
-        $query = DB::table('care_executions as execution')
+        $executions = DB::table('care_executions as execution')
             ->join('care_assignments as assignment', 'assignment.id', '=', 'execution.care_assignment_id')
-            ->leftJoin('care_reviews as review', 'review.care_execution_id', '=', 'execution.id')
-            ->leftJoin('users as reviewer', 'reviewer.id', '=', 'review.reviewed_by')
             ->where('assignment.care_profile_id', $profile);
-        $alerts = (clone $query)->join('care_alerts as alert', 'alert.care_execution_id', '=', 'execution.id')
+        $alerts = (clone $executions)->join('care_alerts as alert', 'alert.care_execution_id', '=', 'execution.id')
             ->orderByDesc('alert.id')->limit(100)
-            ->get(['alert.id', 'alert.source', 'alert.care_execution_id as execution_id', 'review.outcome']);
-        $reviews = $query->whereNotNull('review.id')->get([
-            'execution.id as execution_id', 'review.outcome', 'review.note', 'reviewer.name as reviewer', 'review.reviewed_at',
-        ])->map(function ($review) {
-            $review->reviewed_at = CarbonImmutable::parse($review->reviewed_at, 'UTC')->toIso8601String();
-            return $review;
-        });
+            ->select(['alert.id', 'alert.source', 'alert.care_execution_id as execution_id'])
+            ->selectSub(DB::table('care_reviews')->select('outcome')
+                ->whereColumn('care_execution_id', 'alert.care_execution_id')
+                ->whereColumn('alert_cursor', '>=', 'alert.id')->orderByDesc('id')->limit(1), 'outcome')
+            ->get();
+        $latest = DB::table('care_reviews')->groupBy('care_execution_id')
+            ->selectRaw('MAX(id) as id, care_execution_id');
+        $reviews = $executions->joinSub($latest, 'latest', 'latest.care_execution_id', '=', 'execution.id')
+            ->join('care_reviews as review', 'review.id', '=', 'latest.id')
+            ->join('users as reviewer', 'reviewer.id', '=', 'review.reviewed_by')
+            ->orderByDesc('execution.day')->orderByDesc('execution.recorded_at')->limit(100)
+            ->get(['execution.id as execution_id', 'review.outcome', 'review.note', 'reviewer.name as reviewer', 'review.reviewed_at'])
+            ->map(function ($review) {
+                $review->reviewed_at = CarbonImmutable::parse($review->reviewed_at, 'UTC')->toIso8601String();
+                return $review;
+            });
         return ['alerts' => $alerts, 'reviews' => $reviews];
     }
 
@@ -43,7 +50,9 @@ class ReviewController
             'outcome' => ['required', Rule::in(['seen', 'followup'])],
             'note' => ['required', 'string', 'max:1000'],
         ]);
+        $cursor = DB::table('care_alerts')->where('care_execution_id', $execution)->max('id') ?? 0;
         $saved = DB::table('care_reviews')->insertOrIgnore($data + [
+            'alert_cursor' => $cursor,
             'care_execution_id' => $execution, 'reviewed_by' => $request->user()->id, 'reviewed_at' => now(),
         ]);
         abort_unless($saved, 409, 'Deze registratie is al bekeken.');

@@ -13,8 +13,8 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = newToken;
     user.value = newUser;
     if (import.meta.client) {
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(newUser));
+      sessionStorage.setItem('auth_token', newToken);
+      sessionStorage.setItem('auth_user', JSON.stringify(newUser));
     }
   }
 
@@ -22,18 +22,26 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null;
     user.value = null;
     if (import.meta.client) {
+      sessionStorage.removeItem('auth_token');
       localStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_user');
       localStorage.removeItem('auth_user');
     }
   }
 
   async function restore() {
     if (import.meta.client) {
-      const storedToken = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('auth_user');
+      const storedToken = sessionStorage.getItem('auth_token');
+      const storedUser = sessionStorage.getItem('auth_user');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
       if (storedToken && storedUser) {
-        token.value = storedToken;
-        user.value = JSON.parse(storedUser);
+        try {
+          user.value = JSON.parse(storedUser);
+          token.value = storedToken;
+        } catch {
+          logout();
+        }
       }
     }
   }

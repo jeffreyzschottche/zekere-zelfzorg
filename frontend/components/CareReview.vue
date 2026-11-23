@@ -11,6 +11,7 @@ const error = ref('')
 const saved = ref(false)
 const busy = ref(false)
 const entry = computed(() => props.entries.find(entry => entry.id === selected.value))
+const hasOpenAlert = computed(() => props.inbox.alerts.some(alert => alert.execution_id === selected.value && !alert.outcome))
 const review = computed(() => props.inbox.reviews.find(review => review.execution_id === selected.value))
 
 function open(id: number) {
@@ -63,7 +64,7 @@ async function save() {
         <strong>{{ review.outcome === 'followup' ? 'Vervolg gewenst' : 'Bekeken' }}</strong>
         <p>{{ review.reviewer }} · {{ careDate(review.reviewed_at) }}</p><p>{{ review.note }}</p>
       </div>
-      <form v-else-if="!saved" class="care-stack" @submit.prevent="save">
+      <form v-if="(!review || hasOpenAlert) && !saved" class="care-stack" @submit.prevent="save">
         <label>Uitkomst
           <select v-model="status" class="care-field"><option value="seen">Bekeken</option><option value="followup">Vervolg gewenst</option></select>
         </label>

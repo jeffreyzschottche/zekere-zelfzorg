@@ -14,6 +14,8 @@ const profile = ref<Profile>()
 const today = ref<Today>()
 const error = ref('')
 const busy = ref(true)
+const dueCount = computed(() => checks.value.filter(check => check.can_answer).length)
+let reminderTimer: ReturnType<typeof setInterval> | undefined
 const saving = ref(false)
 const assignment = reactive({ assignee_id: 0, starts_on: '', ends_on: '', time: '20:00', repeat: 'daily' })
 const followup = reactive({ enabled: true, minutes: 15, question: 'observation', trigger: 'yes', responder: 'either' })
@@ -47,6 +49,9 @@ async function select(next: Profile) {
 }
 
 onMounted(async () => {
+  reminderTimer = setInterval(() => {
+    if (profile.value && !busy.value && document.visibilityState === 'visible') void refreshChecks(true)
+  }, 30_000)
   try {
     profiles.value = await api.get<Profile[]>('/care/profiles')
     const first = profiles.value[0]
@@ -57,6 +62,8 @@ onMounted(async () => {
     busy.value = false
   }
 })
+
+onBeforeUnmount(() => clearInterval(reminderTimer))
 
 async function viewDay(day: string) {
   busy.value = true
@@ -70,13 +77,13 @@ async function viewDay(day: string) {
   }
 }
 
-async function refreshChecks() {
+async function refreshChecks(quiet = false) {
   const selected = profile.value?.id
   try {
     const fresh = await api.get<Followup[]>(`${base.value}/followups`)
     if (profile.value?.id === selected) checks.value = fresh
   } catch {
-    if (profile.value?.id === selected) error.value = 'De nazorgchecks konden niet worden vernieuwd.'
+    if (!quiet && profile.value?.id === selected) error.value = 'De nazorgchecks konden niet worden vernieuwd.'
   }
 }
 
@@ -136,9 +143,17 @@ async function plan() {
     <p v-if="error" class="care-alert" role="alert">{{ error }}</p>
     <p v-if="!busy && !error && !profile" class="care-card">Er is nog geen zorgprofiel aan dit account gekoppeld.</p>
     <template v-if="today && profile">
+      <nav class="care-row" aria-label="Op deze pagina">
+        <a class="care-button care-secondary" href="#planning">Zorgplanning</a>
+        <a class="care-button care-secondary" href="#followup-title">Nazorgchecks</a>
+        <a class="care-button care-secondary" href="#log-title">Logboek</a>
+      </nav>
+      <div role="status">
+        <a v-if="dueCount" href="#followup-title" class="care-badge">{{ dueCount === 1 ? 'Er staat een nazorgcheck klaar' : dueCount + ' nazorgchecks staan klaar' }}</a>
+      </div>
       <div class="care-grid">
         <section class="care-card care-stack">
-          <h2 class="text-2xl font-bold">Zorgplanning</h2>
+          <h2 id="planning" class="text-2xl font-bold">Zorgplanning</h2>
           <div class="care-row">
             <button type="button" class="care-button care-secondary" :disabled="busy" :aria-pressed="today.day === today.current_day" @click="viewDay(today.current_day)">Vandaag</button>
             <button type="button" class="care-button care-secondary" :disabled="busy" :aria-pressed="today.day === today.previous_day" @click="viewDay(today.previous_day)">Gisteren</button>
@@ -159,9 +174,9 @@ async function plan() {
           </ul>
         </section>
       </div>
-      <CareReview v-if="inbox" :key="profile.id" :profile="profile.id" :entries="entries" :inbox="inbox" @refresh="refreshReviews" />
-      <CareSkills v-if="skills.length" :key="profile.id" :profile="profile.id" :skills="skills" :professional="profile.role === 'professional'" @refresh="refreshSkills" />
-      <CareFollowups :key="profile.id" :profile="profile.id" :checks="checks" @refresh="refreshChecks" />
+      <CareReview v-if="inbox" :key="'review-' + profile.id" :profile="profile.id" :entries="entries" :inbox="inbox" @refresh="refreshReviews" />
+      <CareSkills v-if="skills.length" :key="'skills-' + profile.id" :profile="profile.id" :skills="skills" :professional="profile.role === 'professional'" @refresh="refreshSkills" />
+      <CareFollowups :key="'followups-' + profile.id" :profile="profile.id" :checks="checks" @refresh="refreshChecks()" />
       <CareLog :entries="entries" :checks="checks" />
       <form v-if="profile.role === 'professional'" class="care-card care-stack" @submit.prevent="plan">
         <h2 class="text-2xl font-bold">Handeling plannen</h2>
