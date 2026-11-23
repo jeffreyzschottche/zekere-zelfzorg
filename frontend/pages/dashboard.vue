@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { roleNames, type Profile, type Today } from '~/types/Care'
+import { roleNames, statusNames, type Entry, type Profile, type Today } from '~/types/Care'
 
 definePageMeta({ middleware: 'auth' })
 
 const api = useApi()
+const route = useRoute()
+const entries = ref<Entry[]>([])
 const profiles = ref<Profile[]>([])
 const profile = ref<Profile>()
 const today = ref<Today>()
@@ -21,7 +23,9 @@ async function select(next: Profile) {
   profile.value = next
   today.value = undefined
   try {
-    today.value = await api.get<Today>(`${base.value}/today`)
+    const [plan, log] = await Promise.all([api.get<Today>(`${base.value}/today`), api.get<Entry[]>(`${base.value}/log`)])
+    today.value = plan
+    entries.value = log
     assignment.starts_on = today.value.day
     assignment.assignee_id = today.value.members.find(member => member.role !== 'professional')?.id ?? 0
   } catch {
@@ -43,6 +47,18 @@ onMounted(async () => {
   }
 })
 
+async function viewDay(day: string) {
+  busy.value = true
+  error.value = ''
+  try {
+    today.value = await api.get<Today>(`${base.value}/today?day=${day}`)
+  } catch {
+    error.value = 'De planning voor deze dag kon niet worden geladen.'
+  } finally {
+    busy.value = false
+  }
+}
+
 async function plan() {
   saving.value = true
   error.value = ''
@@ -61,7 +77,7 @@ async function plan() {
   <div class="care-wrap care-page care-stack">
     <header class="care-stack">
       <span class="care-badge">Fictieve zorgomgeving</span>
-      <h1 class="care-title">Vandaag</h1>
+      <h1 class="care-title">{{ today && today.day !== today.current_day ? 'Gisteren' : 'Vandaag' }}</h1>
       <p v-if="today" class="text-lg capitalize">{{ dateLabel }}</p>
     </header>
     <div v-if="profiles.length > 1" class="care-row" aria-label="Zorgprofielen">
@@ -70,6 +86,7 @@ async function plan() {
         {{ item.name }}
       </button>
     </div>
+    <p v-if="route.query.saved === '1'" class="care-badge" role="status">Registratie opgeslagen</p>
     <p v-if="busy" role="status">Zorgplanning laden…</p>
     <p v-if="error" class="care-alert" role="alert">{{ error }}</p>
     <p v-if="!busy && !error && !profile" class="care-card">Er is nog geen zorgprofiel aan dit account gekoppeld.</p>
@@ -77,11 +94,16 @@ async function plan() {
       <div class="care-grid">
         <section class="care-card care-stack">
           <h2 class="text-2xl font-bold">Zorgplanning</h2>
-          <p v-if="!today.tasks.length">Er staan vandaag geen handelingen gepland.</p>
+          <div class="care-row">
+            <button type="button" class="care-button care-secondary" :disabled="busy" :aria-pressed="today.day === today.current_day" @click="viewDay(today.current_day)">Vandaag</button>
+            <button type="button" class="care-button care-secondary" :disabled="busy" :aria-pressed="today.day === today.previous_day" @click="viewDay(today.previous_day)">Gisteren</button>
+          </div>
+          <p v-if="!today.tasks.length">Er staan op deze dag geen handelingen gepland.</p>
           <article v-for="task in today.tasks" :key="task.id" class="care-card care-stack">
-            <div class="care-row"><time>{{ task.time }}</time><span class="care-badge">Nog niet bevestigd</span></div>
+            <div class="care-row"><time>{{ task.time }}</time><span class="care-badge">{{ task.status ? statusNames[task.status] : 'Nog niet bevestigd' }}</span></div>
             <h3 class="text-xl font-bold">{{ task.title }}</h3>
             <p>Uitvoerder op de planning: {{ memberName(task.assignee_id) }}</p>
+            <div v-if="task.can_execute"><NuxtLink class="care-button" :to="{ path: '/handeling', query: { profile: profile.id, task: task.id, day: task.day, past: today.day === today.current_day ? '0' : '1' } }">{{ today.day === today.current_day ? 'Start handeling' : 'Registreren' }}</NuxtLink></div>
           </article>
         </section>
         <section class="care-card care-stack">
@@ -92,6 +114,7 @@ async function plan() {
           </ul>
         </section>
       </div>
+      <CareLog :entries="entries" />
       <form v-if="profile.role === 'professional'" class="care-card care-stack" @submit.prevent="plan">
         <h2 class="text-2xl font-bold">Handeling plannen</h2>
         <p>Nachtzak bij een katheterdagzak — demonstratie</p>

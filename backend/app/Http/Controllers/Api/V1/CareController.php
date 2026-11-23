@@ -23,12 +23,18 @@ class CareController
     {
         $user = $request->user()->id;
         $role = $access->role($profile, $user);
-        $day = CarbonImmutable::now(Planning::ZONE)->toDateString();
+        $current = CarbonImmutable::now(Planning::ZONE)->startOfDay();
+        $day = $request->validate(['day' => 'nullable|date_format:Y-m-d'])['day'] ?? $current->toDateString();
+        abort_unless($day <= $current->toDateString() && $day >= $current->subDays(30)->toDateString(), 422);
+        $statuses = DB::table('care_executions as execution')
+            ->join('care_assignments as assignment', 'assignment.id', '=', 'execution.care_assignment_id')
+            ->where('assignment.care_profile_id', $profile)->where('execution.day', $day)
+            ->pluck('execution.status', 'execution.care_assignment_id');
         $members = DB::table('care_members')->where('care_profile_id', $profile)
             ->join('users', 'users.id', '=', 'care_members.user_id')
             ->orderBy('users.name')->get(['users.id', 'users.name', 'role']);
         $tasks = DB::table('care_assignments')->where('care_profile_id', $profile)
-            ->orderBy('time')->get()->map(function ($assignment) use ($planning, $templates, $day, $user, $role) {
+            ->orderBy('time')->get()->map(function ($assignment) use ($planning, $templates, $day, $user, $role, $statuses) {
                 $instant = $planning->scheduledAt($assignment, $day);
                 if (!$instant) {
                     return null;
@@ -37,11 +43,12 @@ class CareController
                     'id' => $assignment->id, 'title' => $templates->title($assignment->template),
                     'assignee_id' => $assignment->assignee_id, 'day' => $day,
                     'time' => $instant->setTimezone(Planning::ZONE)->format('H:i'),
-                    'can_execute' => $role !== 'professional' && $user === $assignment->assignee_id,
+                    'status' => $statuses[$assignment->id] ?? null,
+                    'can_execute' => in_array($role, ['patient', 'caregiver'], true) && $user === $assignment->assignee_id && !isset($statuses[$assignment->id]),
                 ];
             })->filter()->values();
 
-        return ['day' => $day, 'members' => $members, 'tasks' => $tasks];
+        return ['day' => $day, 'previous_day' => $current->subDay()->toDateString(), 'current_day' => $current->toDateString(), 'members' => $members, 'tasks' => $tasks];
     }
 
     public function assign(Request $request, int $profile, CareAccess $access)
