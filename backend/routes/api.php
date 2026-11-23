@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CareController;
 use App\Http\Controllers\Api\V1\ExecutionController;
+use App\Http\Controllers\Api\V1\FollowupController;
 
 Route::prefix('v1')->group(function () {
     // Public routes
@@ -25,6 +26,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/care/profiles/{profile}/log', [ExecutionController::class, 'log']);
         Route::get('/care/profiles/{profile}/assignments/{assignment}/{day}', [ExecutionController::class, 'show']);
         Route::post('/care/profiles/{profile}/assignments/{assignment}/{day}', [ExecutionController::class, 'store']);
+        Route::get('/care/profiles/{profile}/followups', [FollowupController::class, 'index']);
+        Route::post('/care/profiles/{profile}/followups/{check}', [FollowupController::class, 'answer']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/email/resend', [AuthController::class, 'resendVerification']);
     });

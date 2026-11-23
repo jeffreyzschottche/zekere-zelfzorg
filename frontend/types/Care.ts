@@ -32,3 +32,9 @@ export function careDate(value: string) {
     dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Amsterdam',
   }).format(new Date(value))
 }
+
+export type Followup = {
+  id: number; execution_id: number; title: string; day: string; due_at: string; is_due: boolean
+  question: string; options: Record<string, string>; answer: string | null; observer: string | null
+  deviation: boolean; can_answer: boolean
+}

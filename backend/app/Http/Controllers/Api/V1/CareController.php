@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Care\CareAccess;
+use App\Care\Followups;
 use App\Care\Planning;
 use App\Care\Templates;
 use Carbon\CarbonImmutable;
@@ -62,6 +63,10 @@ class CareController
             'ends_on' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:starts_on'],
             'time' => ['required', 'date_format:H:i'],
             'repeat' => ['required', Rule::in(['once', 'daily', 'alternate', 'weekly'])],
+            'followup_minutes' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:10080'],
+            'followup_question' => ['sometimes', Rule::in(array_keys(Followups::QUESTIONS))],
+            'followup_trigger' => ['sometimes', Rule::in(array_keys(Followups::ANSWERS))],
+            'followup_responder' => ['sometimes', Rule::in(['either', 'patient', 'executor'])],
         ]);
         $id = DB::table('care_assignments')->insertGetId($data + [
             'care_profile_id' => $profile, 'template' => Templates::NIGHT_BAG,

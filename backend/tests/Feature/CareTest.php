@@ -69,4 +69,28 @@ class CareTest extends TestCase
         $this->getJson("/api/v1/care/profiles/$profile/today?day=2026-11-22")->assertOk()
             ->assertJsonPath('tasks.0.status', 'performed');
     }
+
+    public function test_followup_due_time_permissions_and_simulated_alert(): void
+    {
+        $profile = DB::table('care_profiles')->value('id');
+        $assignment = DB::table('care_assignments')->value('id');
+        $base = "/api/v1/care/profiles/$profile";
+        $this->loginAs('sam');
+        $this->postJson("$base/assignments/$assignment/2026-11-23", [
+            'status' => 'performed', 'version' => 'demo-1', 'answers' => ['doubt' => 'no'],
+        ])->assertCreated();
+        $check = $this->getJson("$base/followups")->assertOk()->assertJsonPath('0.is_due', false)
+            ->assertJsonPath('0.due_at', '2026-11-23T20:15:00+00:00')->json('0.id');
+        $this->postJson("$base/followups/$check", ['answer' => 'yes'])->assertConflict();
+        $this->travel(15)->minutes();
+        $this->loginAs('noor');
+        $this->postJson("$base/followups/$check", ['answer' => 'yes'])->assertForbidden();
+        $this->loginAs('alex');
+        $this->postJson("$base/followups/$check", ['answer' => 'yes'])->assertOk()
+            ->assertExactJson(['deviation' => true, 'simulated' => true]);
+        $this->postJson("$base/followups/$check", ['answer' => 'no'])->assertConflict();
+        $this->getJson("$base/followups")->assertJsonPath('0.observer', 'Alex de Vries')
+            ->assertJsonPath('0.deviation', true);
+        $this->assertDatabaseCount('care_alerts', 1);
+    }
 }

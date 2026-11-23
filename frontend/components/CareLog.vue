@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { careDate, statusNames, type Entry } from '~/types/Care'
-defineProps<{ entries: Entry[] }>()
+import { careDate, statusNames, type Entry, type Followup } from '~/types/Care'
+defineProps<{ entries: Entry[]; checks: Followup[] }>()
 </script>
 
 <template>
@@ -13,6 +13,9 @@ defineProps<{ entries: Entry[] }>()
       <p v-if="entry.retrospective">Achteraf geregistreerd</p>
       <p v-if="entry.performed_at">Uitvoertijd {{ careDate(entry.performed_at) }}</p>
       <p>Instructieversie {{ entry.version }}</p>
+      <p v-for="check in checks.filter(check => check.execution_id === entry.id)" :key="check.id">
+        Nazorgcheck · {{ check.answer ? 'Beantwoord door ' + check.observer : check.is_due ? 'Nog niet beantwoord' : 'Gepland' }}
+      </p>
       <p v-if="entry.note">{{ entry.note }}</p>
     </details>
   </section>

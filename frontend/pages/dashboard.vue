@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { roleNames, statusNames, type Entry, type Profile, type Today } from '~/types/Care'
+import { roleNames, statusNames, type Entry, type Followup, type Profile, type Today } from '~/types/Care'
 
 definePageMeta({ middleware: 'auth' })
 
 const api = useApi()
 const route = useRoute()
 const entries = ref<Entry[]>([])
+const checks = ref<Followup[]>([])
 const profiles = ref<Profile[]>([])
 const profile = ref<Profile>()
 const today = ref<Today>()
@@ -13,6 +14,7 @@ const error = ref('')
 const busy = ref(true)
 const saving = ref(false)
 const assignment = reactive({ assignee_id: 0, starts_on: '', ends_on: '', time: '20:00', repeat: 'daily' })
+const followup = reactive({ enabled: true, minutes: 15, question: 'observation', trigger: 'yes', responder: 'either' })
 const base = computed(() => `/care/profiles/${profile.value?.id}`)
 const dateLabel = computed(() => today.value && new Intl.DateTimeFormat('nl-NL', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(today.value.day)))
 const memberName = (id: number) => today.value?.members.find(member => member.id === id)?.name
@@ -23,9 +25,12 @@ async function select(next: Profile) {
   profile.value = next
   today.value = undefined
   try {
-    const [plan, log] = await Promise.all([api.get<Today>(`${base.value}/today`), api.get<Entry[]>(`${base.value}/log`)])
+    const [plan, log, followups] = await Promise.all([
+      api.get<Today>(`${base.value}/today`), api.get<Entry[]>(`${base.value}/log`), api.get<Followup[]>(`${base.value}/followups`),
+    ])
     today.value = plan
     entries.value = log
+    checks.value = followups
     assignment.starts_on = today.value.day
     assignment.assignee_id = today.value.members.find(member => member.role !== 'professional')?.id ?? 0
   } catch {
@@ -59,11 +64,25 @@ async function viewDay(day: string) {
   }
 }
 
+async function refreshChecks() {
+  const selected = profile.value?.id
+  try {
+    const fresh = await api.get<Followup[]>(`${base.value}/followups`)
+    if (profile.value?.id === selected) checks.value = fresh
+  } catch {
+    if (profile.value?.id === selected) error.value = 'De nazorgchecks konden niet worden vernieuwd.'
+  }
+}
+
 async function plan() {
   saving.value = true
   error.value = ''
   try {
-    await api.post(`${base.value}/assignments`, { ...assignment, ends_on: assignment.ends_on || null })
+    await api.post(`${base.value}/assignments`, {
+      ...assignment, ends_on: assignment.ends_on || null,
+      followup_minutes: followup.enabled ? followup.minutes : null,
+      followup_question: followup.question, followup_trigger: followup.trigger, followup_responder: followup.responder,
+    })
     today.value = await api.get<Today>(`${base.value}/today`)
   } catch {
     error.value = 'De planning kon niet worden opgeslagen. Controleer de velden en probeer opnieuw.'
@@ -114,7 +133,8 @@ async function plan() {
           </ul>
         </section>
       </div>
-      <CareLog :entries="entries" />
+      <CareFollowups :key="profile.id" :profile="profile.id" :checks="checks" @refresh="refreshChecks" />
+      <CareLog :entries="entries" :checks="checks" />
       <form v-if="profile.role === 'professional'" class="care-card care-stack" @submit.prevent="plan">
         <h2 class="text-2xl font-bold">Handeling plannen</h2>
         <p>Nachtzak bij een katheterdagzak — demonstratie</p>
@@ -134,6 +154,28 @@ async function plan() {
           <label>Einddatum (optioneel) <input v-model="assignment.ends_on" type="date" class="care-field" :min="assignment.starts_on" /></label>
           <label>Tijd <input v-model="assignment.time" type="time" class="care-field" required /></label>
         </div>
+        <fieldset class="care-card care-stack">
+          <legend class="font-semibold">Nazorg in deze demonstratie</legend>
+          <label><input v-model="followup.enabled" type="checkbox" /> Nazorgcheck plannen</label>
+          <div v-if="followup.enabled" class="care-grid">
+            <label>Minuten na uitvoering <input v-model.number="followup.minutes" type="number" min="0" max="10080" class="care-field" required /></label>
+            <label>Vraag
+              <select v-model="followup.question" class="care-field">
+                <option value="observation">Is er iets opgevallen?</option><option value="support">Is extra uitleg gewenst?</option>
+              </select>
+            </label>
+            <label>Melding bij
+              <select v-model="followup.trigger" class="care-field">
+                <option value="yes">Ja</option><option value="no">Nee</option><option value="unknown">Weet ik niet</option>
+              </select>
+            </label>
+            <label>Wie antwoordt?
+              <select v-model="followup.responder" class="care-field">
+                <option value="either">Patiënt of uitvoerder</option><option value="patient">Patiënt</option><option value="executor">Uitvoerder</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
         <div><button type="submit" class="care-button" :disabled="saving">Planning opslaan</button></div>
       </form>
     </template>

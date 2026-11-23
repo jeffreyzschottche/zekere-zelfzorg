@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Care\CareAccess;
+use App\Care\Followups;
 use App\Care\Planning;
 use App\Care\Templates;
 use Carbon\CarbonImmutable;
@@ -12,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class ExecutionController
 {
-    public function __construct(private CareAccess $access, private Planning $planning, private Templates $templates) {}
+    public function __construct(private CareAccess $access, private Planning $planning, private Templates $templates, private Followups $followups) {}
 
     private function assignment(Request $request, int $profile, int $assignment, string $day): object
     {
@@ -50,17 +51,23 @@ class ExecutionController
         $performed = isset($data['performed_at']) ? CarbonImmutable::parse($data['performed_at'])->utc() : null;
         abort_if($performed && ($performed->gt($now) || $performed->setTimezone(Planning::ZONE)->toDateString() !== $day), 422, 'Kies een uitvoertijd op de geplande dag die al voorbij is.');
 
-        $inserted = DB::table('care_executions')->insertOrIgnore([
-            'care_assignment_id' => $record->id, 'recorded_by' => $request->user()->id,
-            'day' => $day, 'status' => $data['status'], 'version' => $instruction['version'],
-            'answers' => json_encode($data['answers'] ?? [], JSON_THROW_ON_ERROR),
-            'opened_steps' => json_encode($data['opened_steps'] ?? [], JSON_THROW_ON_ERROR),
-            'note' => $data['note'] ?? null,
-            'performed_at' => $data['status'] === 'performed' ? ($performed ?? ($retrospective ? null : $now)) : null,
-            'recorded_at' => $now, 'retrospective' => $retrospective,
-        ]);
-        abort_unless($inserted, 409, 'Er staat al een registratie bij deze uitvoering.');
-        return response()->json(['saved' => true], 201);
+        return DB::transaction(function () use ($record, $request, $day, $data, $instruction, $performed, $retrospective, $now) {
+            $actual = $data['status'] === 'performed' ? ($performed ?? ($retrospective ? null : $now)) : null;
+            $inserted = DB::table('care_executions')->insertOrIgnore([
+                'care_assignment_id' => $record->id, 'recorded_by' => $request->user()->id,
+                'day' => $day, 'status' => $data['status'], 'version' => $instruction['version'],
+                'answers' => json_encode($data['answers'] ?? [], JSON_THROW_ON_ERROR),
+                'opened_steps' => json_encode($data['opened_steps'] ?? [], JSON_THROW_ON_ERROR),
+                'note' => $data['note'] ?? null, 'performed_at' => $actual,
+                'recorded_at' => $now, 'retrospective' => $retrospective,
+            ]);
+            abort_unless($inserted, 409, 'Er staat al een registratie bij deze uitvoering.');
+            if ($data['status'] === 'performed') {
+                $id = DB::table('care_executions')->where('care_assignment_id', $record->id)->where('day', $day)->value('id');
+                $this->followups->onExecution($id, $record, $now, $actual, $data['answers']['doubt'] ?? null);
+            }
+            return response()->json(['saved' => true], 201);
+        });
     }
 
     public function log(Request $request, int $profile)
