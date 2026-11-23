@@ -1,60 +1,26 @@
-<template>
-  <nav class="bg-white shadow">
-    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-      <NuxtLink to="/" class="text-xl font-bold">Starter Kit</NuxtLink>
-
-      <div class="flex items-center space-x-4">
-        <NuxtLink
-          v-for="link in navLinks"
-          :key="link.to"
-          :to="link.to"
-          class="text-sm text-gray-700 transition hover:text-blue-600"
-        >
-          {{ link.label }}
-        </NuxtLink>
-      </div>
-
-      <div class="flex items-center space-x-4">
-        <template v-if="authStore.isLoggedIn">
-          <span class="text-sm text-gray-700">{{ authStore.user?.name }}</span>
-          <button
-            @click="handleLogout"
-            class="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-          >
-            Logout
-          </button>
-        </template>
-        <template v-else>
-          <span class="text-sm text-gray-500">Niet ingelogd</span>
-        </template>
-      </div>
-    </div>
-  </nav>
-</template>
-
 <script setup lang="ts">
-const authStore = useAuthStore();
-const router = useRouter();
-
-const navLinks = computed(() => [
-  { to: '/', label: 'Home' },
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/login', label: 'Login' },
-  { to: '/register', label: 'Register' },
-  { to: '/forgot-password', label: 'Forgot Password' },
-  { to: '/reset-password', label: 'Reset Password' },
-  { to: '/verify-email', label: 'Verify Email' },
-]);
-
-async function handleLogout() {
+const auth = useAuthStore()
+const api = useApi()
+async function logout() {
   try {
-    const api = useApi();
-    await api.post('/logout');
-  } catch (error) {
-    console.error('Logout error:', error);
+    await api.post('/logout')
   } finally {
-    authStore.logout();
-    router.push('/login');
+    auth.logout()
+    await navigateTo('/login')
   }
 }
 </script>
+
+<template>
+  <a href="#inhoud" class="care-button care-skip">Direct naar inhoud</a>
+  <header class="care-header">
+    <nav class="care-wrap care-nav" aria-label="Hoofdnavigatie">
+      <NuxtLink to="/" class="care-brand"><span class="care-mark" aria-hidden="true">✓</span>Zekere Zelfzorg</NuxtLink>
+      <template v-if="auth.isLoggedIn">
+        <NuxtLink to="/dashboard" class="care-button care-secondary">Mijn zorg</NuxtLink>
+        <button type="button" class="care-button care-secondary" @click="logout">Uitloggen</button>
+      </template>
+      <NuxtLink v-else to="/login" class="care-button care-secondary">Inloggen</NuxtLink>
+    </nav>
+  </header>
+</template>

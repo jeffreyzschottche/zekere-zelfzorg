@@ -1,5 +1,7 @@
 export default defineNuxtConfig({
   srcDir: '.',
+  css: ['~/assets/css/care.css'],
+  app: { head: { htmlAttrs: { lang: 'nl' }, title: 'Zekere Zelfzorg' } },
   compatibilityDate: '2024-01-09',
 
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],

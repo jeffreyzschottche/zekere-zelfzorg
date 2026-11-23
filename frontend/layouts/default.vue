@@ -1,7 +1,7 @@
 <template>
   <div>
     <AppNav />
-    <main>
+    <main id="inhoud" tabindex="-1">
       <slot />
     </main>
   </div>
